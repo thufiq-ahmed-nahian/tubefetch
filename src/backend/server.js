@@ -33,7 +33,13 @@ app.get('/api/analyze-stream', (req, res) => {
 
   sendSSE('progress', { percent: 15, status: 'Connecting to YouTube servers...' });
 
-  const ytdlp = spawn('yt-dlp', ['--dump-json', '--no-warnings', videoUrl]);
+  // Added --extractor-args to bypass YouTube bot detection on cloud IPs
+  const ytdlp = spawn('yt-dlp', [
+    '--extractor-args', 'youtube:player_client=android,web',
+    '--dump-json',
+    '--no-warnings',
+    videoUrl
+  ]);
 
   let stdoutData = '';
   let stderrData = '';
@@ -112,7 +118,11 @@ app.get('/api/download-stream', (req, res) => {
   const fileName = `TubeFetch_${Date.now()}.${ext}`;
   const tempFilePath = path.join(os.tmpdir(), `tubefetch_${fileId}.${ext}`);
 
-  let ytdlpArgs = ['--newline'];
+  // Added --extractor-args to bypass YouTube bot detection on cloud IPs
+  let ytdlpArgs = [
+    '--newline',
+    '--extractor-args', 'youtube:player_client=android,web'
+  ];
 
   if (type === 'mp3') {
     ytdlpArgs.push('-x', '--audio-format', 'mp3', '--audio-quality', '192K', '-o', tempFilePath, url);
