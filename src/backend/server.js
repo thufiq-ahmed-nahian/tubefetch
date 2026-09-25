@@ -16,9 +16,20 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// In-memory registry for completed temporary download files
 const tempFiles = new Map();
 const cookiesPath = path.join(__dirname, 'cookies.txt');
+
+// Helper to construct base args with Android spoofing & cookies
+function getBaseYtdlpArgs() {
+  const args = [
+    '--extractor-args', 'youtube:player_client=android,mweb',
+    '--no-warnings'
+  ];
+  if (fs.existsSync(cookiesPath)) {
+    args.push('--cookies', cookiesPath);
+  }
+  return args;
+}
 
 // 1. Real-time Analysis Progress Endpoint
 app.get('/api/analyze-stream', (req, res) => {
@@ -38,12 +49,7 @@ app.get('/api/analyze-stream', (req, res) => {
 
   sendSSE('progress', { percent: 15, status: 'Connecting to YouTube servers...' });
 
-  const ytdlpArgs = ['--dump-json', '--no-warnings'];
-  if (fs.existsSync(cookiesPath)) {
-    ytdlpArgs.push('--cookies', cookiesPath);
-  }
-  ytdlpArgs.push(videoUrl);
-
+  const ytdlpArgs = [...getBaseYtdlpArgs(), '--dump-json', videoUrl];
   const ytdlp = spawn('yt-dlp', ytdlpArgs);
 
   let stdoutData = '';
@@ -123,11 +129,7 @@ app.get('/api/download-stream', (req, res) => {
   const fileName = `TubeFetch_${Date.now()}.${ext}`;
   const tempFilePath = path.join(os.tmpdir(), `tubefetch_${fileId}.${ext}`);
 
-  let ytdlpArgs = ['--newline'];
-
-  if (fs.existsSync(cookiesPath)) {
-    ytdlpArgs.push('--cookies', cookiesPath);
-  }
+  let ytdlpArgs = [...getBaseYtdlpArgs(), '--newline'];
 
   if (type === 'mp3') {
     ytdlpArgs.push('-x', '--audio-format', 'mp3', '--audio-quality', '192K', '-o', tempFilePath, url);
@@ -142,7 +144,7 @@ app.get('/api/download-stream', (req, res) => {
 
   const downloader = spawn('yt-dlp', ytdlpArgs);
 
-  downloader.on('error', (err) => {
+  downloader.on('error', () => {
     sendSSE('error', { message: 'Failed to launch yt-dlp.' });
     res.end();
   });
