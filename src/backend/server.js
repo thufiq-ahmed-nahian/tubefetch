@@ -93,7 +93,7 @@ app.get('/api/download-stream', (req, res) => {
     ytdlpArgs.push('-x', '--audio-format', 'mp3', '--audio-quality', '192K', '-o', tempFilePath, url);
   } else {
     ytdlpArgs.push(
-      '-f', `bestvideo[height<=${targetHeight}][ext=mp4]+bestaudio[ext=m4a]/best[height<=${targetHeight}][ext=mp4]/best`,
+      '-f', `bestvideo[height<=${targetHeight}]+bestaudio/best[height<=${targetHeight}]/best`,
       '--merge-output-format', 'mp4',
       '-o', tempFilePath,
       url
